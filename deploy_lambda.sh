@@ -103,7 +103,7 @@ echo "Updating Lambda configuration..."
 aws lambda update-function-configuration \
     --function-name "${function_name}" \
     --timeout 60 \
-    --memory-size 128 \
+    --memory-size 1024 \
     --ephemeral-storage '{"size": 512}' \
     --region ${AWS_REGION}
 
