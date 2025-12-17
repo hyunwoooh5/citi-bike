@@ -27,7 +27,10 @@ In bike-sharing systems like Citi Bike, **Rebalancing** is a critical operationa
 
 ### The Objective
 
-To solve this, this project aims to predict the stock level **15 minutes ahead**. Accurate predictions allow the operations team to proactively rebalance bikes or notify users, optimizing system efficiency.
+This project aims to solve the rebalancing problem by building a machine learning model that **predicts stock levels 15 minutes into the future and when the station becomes empty**.
+
+**Key Assumption & Real-World Implementation:**
+The model relies on recent historical data (previous stock levels) to calculate lag features and make accurate predictions. In a real-world business scenario, this is achieved by **continuously collecting data every 15 minutes via the Citi Bike API**. This ensures the system always has the most recent sequence of data required to predict the next time step.
 
 
 
@@ -39,7 +42,14 @@ The data is sourced from the [NYC Citi Bike System Data](https://citibikenyc.com
 
 * **Training Data:** 2024 records (via `data/download_data.sh` and `db/2024_citibike_top3_stations.sql`).
 * **Test Data:** 2025 records (via `data/2025_citibike_top3_stations.sql`).
-* **Preprocessing:** Handled by `src/data.py`.
+* **Preprocessing:** Handled by `src/data.py`. 
+
+### Key Data Assumption: Daily Rebalancing
+
+For the purpose of this project, a specific initialization rule was applied to the dataset:
+
+> **At 00:00 (midnight) every day, every station is assumed to be rebalanced.**
+> The stock is reset to **10 classic bikes** and **10 electric bikes** for each station. This provides a consistent baseline for the model to begin predictions for the new day.
 
 ### Feature Descriptions
 

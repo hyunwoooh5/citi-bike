@@ -81,7 +81,18 @@ def predict_single(model, info):
         'date'
     ]
 
-    return model.predict(inference_df[features]).tolist()
+    pred = model.predict(inference_df[features])
+    result_df = pd.DataFrame({'time': inference_df['time'] + pd.Timedelta(minutes=15), 'prediction':pred})
+    result_df = result_df.reset_index()
+    
+    initial_stock = 10
+    target = 10
+    ans = []
+    for i in range(len(result_df)):
+        if result_df.loc[i, 'prediction'] < initial_stock - target:
+            ans.append(result_df.loc[i, 'time'].strftime('%Y-%m-%d %H:%M:%S'))
+            initial_stock -= target
+    return ans
 
 
 def lambda_handler(event, context):
@@ -94,5 +105,5 @@ def lambda_handler(event, context):
         data = event
 
     info = Info(**data)
-    prob = predict_single(model, info)
-    return prob
+    prediction = predict_single(model, info)
+    return {"prediction": prediction, "warning": bool(prediction)}

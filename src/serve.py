@@ -5,7 +5,8 @@ import pickle
 from predict import Info, predict_single
 
 class PredictResponse(BaseModel):
-    prediction: list[float]
+    prediction: list[str]
+    warning: bool
 
 try:
     with open("bin/model.bin", "rb") as f:
@@ -21,10 +22,11 @@ app = FastAPI(title="citi-bike")
 
 @app.post("/predict")
 def predict(info: Info) -> PredictResponse:
-    prob = predict_single(model, info)
+    prediction = predict_single(model, info)
 
     return PredictResponse(
-        prediction=prob
+        prediction=prediction,
+        warning=bool(prediction)
     )
 
 

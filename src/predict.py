@@ -84,5 +84,17 @@ def predict_single(model, info):
         'lag_15m_stock', 'lag_30m_stock', 'lag_45m_stock', 'lag_60m_stock',
         'date'
     ]
+    
+    pred = model.predict(inference_df[features])
+    result_df = pd.DataFrame({'time': inference_df['time'] + pd.Timedelta(minutes=15), 'prediction':pred})
+    result_df = result_df.reset_index()
+    
+    initial_stock = 10
+    target = 10
+    ans = []
+    for i in range(len(result_df)):
+        if result_df.loc[i, 'prediction'] < initial_stock - target:
+            ans.append(result_df.loc[i, 'time'].strftime('%Y-%m-%d %H:%M:%S'))
+            initial_stock -= target
+    return ans
 
-    return model.predict(inference_df[features]).tolist()
