@@ -11,5 +11,17 @@ do
 
 done
 
-unzip "*.zip"
-rm "*.zip"
+
+for i in {01..11};
+do
+    FILE_NAME="2025${i}-citibike-tripdata.zip"
+    DOWNLOAD_URL="${BASE_URL}/${FILE_NAME}"
+
+    wget -P ./data/ "${DOWNLOAD_URL}"
+
+done
+
+
+unzip "data/*.zip" -d "data/"
+rm "data/*.zip"
+

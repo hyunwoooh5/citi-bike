@@ -1,0 +1,19 @@
+# Use the official AWS Lambda base image for Python 3.13
+FROM public.ecr.aws/lambda/python:3.13
+
+# Copy the uv package manager from its latest image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
+
+# Copy dependency and environment configuration files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies into the Lambda runtime environment
+# uv export → generates a requirements.txt from pyproject.toml and uv.lock
+# uv pip install --system → installs directly into the system environment
+RUN uv pip install --system -r <(uv export --format requirements-txt --no-dev)
+
+# Copy the Lambda function code and model artifact
+COPY "src/lambda_function.py" "bin/model.bin" "data/2025_long.csv" ./
+
+# Set the default command to run the Lambda handler function
+CMD ["lambda_function.lambda_handler"]
