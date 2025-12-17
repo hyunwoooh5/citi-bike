@@ -245,7 +245,8 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 ├── notebooks/
 │   └── notebook.ipynb            # EDA and model experimentation
 ├── src/
-│   ├── data.py                   # Feature engineering logic
+│   ├── data_collection.py        # Add data to SQL database script
+│   ├── data_preprocessing.py     # Feature engineering logic
 │   ├── train.py                  # Model training script
 │   ├── predict.py                # Prediction logic
 │   ├── serve.py                  # FastAPI server (Local)
