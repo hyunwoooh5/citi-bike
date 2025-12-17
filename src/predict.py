@@ -21,6 +21,8 @@ class Info(BaseModel):
 
             if parsed_date.year != 2025:
                 raise ValueError("Year should be 2025")
+            elif parsed_date.month == 12:
+                raise ValueError("Month should be less than 12")
 
         except ValueError as e:
             raise ValueError("Incorrect date")
@@ -28,7 +30,7 @@ class Info(BaseModel):
         return date_value
 
 
-def predict_single(model, info):
+def predict_day(model, info):
     try:
         df_history = pd.read_csv(
             "data/2025_timeseries.csv", index_col=0, header=[0, 1], parse_dates=True)
@@ -54,7 +56,8 @@ def predict_single(model, info):
     )
     data = df_history.loc[mask].copy()
 
-    data['lag_15m_stock'] = data['stock'].shift(1)  # 1 row back (assuming 15min freq)
+    data['lag_15m_stock'] = data['stock'].shift(
+        1)  # 1 row back (assuming 15min freq)
     data['lag_30m_stock'] = data['stock'].shift(2)
     data['lag_45m_stock'] = data['stock'].shift(3)
     data['lag_60m_stock'] = data['stock'].shift(4)
@@ -84,11 +87,12 @@ def predict_single(model, info):
         'lag_15m_stock', 'lag_30m_stock', 'lag_45m_stock', 'lag_60m_stock',
         'date'
     ]
-    
+
     pred = model.predict(inference_df[features])
-    result_df = pd.DataFrame({'time': inference_df['time'] + pd.Timedelta(minutes=15), 'prediction':pred})
+    result_df = pd.DataFrame(
+        {'time': inference_df['time'] + pd.Timedelta(minutes=15), 'prediction': pred})
     result_df = result_df.reset_index()
-    
+
     initial_stock = 10
     target = 10
     ans = []
@@ -97,4 +101,3 @@ def predict_single(model, info):
             ans.append(result_df.loc[i, 'time'].strftime('%Y-%m-%d %H:%M:%S'))
             initial_stock -= target
     return ans
-

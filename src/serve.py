@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 from pydantic import BaseModel
 import pickle
-from predict import Info, predict_single
+from predict import Info, predict_day
 
 class PredictResponse(BaseModel):
     prediction: list[str]
@@ -22,7 +22,7 @@ app = FastAPI(title="citi-bike")
 
 @app.post("/predict")
 def predict(info: Info) -> PredictResponse:
-    prediction = predict_single(model, info)
+    prediction = predict_day(model, info)
 
     return PredictResponse(
         prediction=prediction,

@@ -21,6 +21,8 @@ class Info(BaseModel):
 
             if parsed_date.year != 2025:
                 raise ValueError("Year should be 2025")
+            elif parsed_date.month == 12:
+                raise ValueError("Month should be less than 12")
 
         except ValueError as e:
             raise ValueError("Incorrect date")
@@ -38,7 +40,7 @@ DF_HISTORY['station'] = DF_HISTORY['station'].astype('category')
 DF_HISTORY['rideable_type'] = DF_HISTORY['rideable_type'].astype('category')
 
 
-def predict_single(model, info):
+def predict_day(model, info):
     start_search = pd.to_datetime(info.target_date) - pd.Timedelta(hours=2)
     end_search = pd.to_datetime(info.target_date) + pd.Timedelta(hours=24)
 
@@ -105,5 +107,5 @@ def lambda_handler(event, context):
         data = event
 
     info = Info(**data)
-    prediction = predict_single(model, info)
+    prediction = predict_day(model, info)
     return {"prediction": prediction, "warning": bool(prediction)}
