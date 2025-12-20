@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: citi-bike-app
+spec:
+  replicas: 1 # initial number of pods
+  selector:
+    matchLabels:
+      app: citi-bike
+  template:
+    metadata:
+      labels:
+        app: citi-bike
+    spec:
+      containers:
+      - name: citi-bike-container
+        image: citi-bike:v1
+        imagePullPolicy: Never # local
+        ports:
+        - containerPort: 9696
+        resources:
+          requests:
+            cpu: "100m" # 0.1 CPU core
+            memory: "256Mi"
+          limits:
+            cpu: "500m" # 0.5 CPU core
+            memory: "512Mi"
+        livenessProbe: # Check alive
+          httpGet:
+            path: /health
+            port: 9696
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe: # Check ready
+          httpGet:
+            path: /health
+            port: 9696
+          initialDelaySeconds: 5
+          periodSeconds: 5

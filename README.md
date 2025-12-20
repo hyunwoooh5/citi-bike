@@ -137,7 +137,8 @@ uv sync --locked
 ```
 
 
-2. **Run the server:**
+2. **Run the server:** 
+*Note: The server runs on host `0.0.0.0` and port `9696`.*
 ```bash
 uv run python src/serve.py
 
@@ -145,7 +146,7 @@ uv run python src/serve.py
 
 
 3. **Access the API:**
-Open [http://localhost:1212/docs](https://www.google.com/search?q=http://localhost:1212/docs) to use the Swagger UI.
+Open [http://localhost:9696/docs](http://localhost:9696/docs) to use the Swagger UI.
 
 
 
@@ -160,7 +161,92 @@ docker build --platform=linux/amd64 -t citi-bike .
 
 2. **Run the container:**
 ```bash
-docker run -it --rm --platform=linux/amd64 -p 1212:9696 citi-bike
+docker run -it --rm --platform=linux/amd64 -p 9696:9696 citi-bike
+
+```
+
+### Options 3: Run with Kubernetes (Kind & HPA)
+This project supports local Kubernetes deployment with **Horizontal Pod Autoscaling (HPA)** using Kind.
+
+
+#### 1. Setup Cluster & Metrics Server
+
+Create a cluster and install the Metric Servers (patched for Kind) to enable HPA.
+
+```bash
+# 1. Create Cluster
+kind create cluster --name citi-bike-cluster
+
+# 2. Install Metrics Server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+# 3. Patch Metrics Server (Required for Kind)
+kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+
+```
+
+
+#### 2. Deploy Application
+
+Build the image, load it into the cluster nodes, and deploy resources.
+
+```bash
+# 1. Build & Load Image
+docker build -t citi-bike:v1 -f Dockerfile .
+kind load docker-image citi-bike:v1 --name citi-bike-cluster
+
+# 2. Apply Manifests (Deployment, Service, HPA)
+kubectl apply -f k8s/
+
+```
+
+
+#### 3. Access the Service
+
+Port-forward the service to your local machine.
+
+```bash
+kubectl port-forward service/citi-bike-service 8080:80
+
+```
+
+Access the API at: [http://localhost:8080/docs](https://www.google.com/search?q=http://localhost:8080/docs)
+
+
+#### 4. Test Autoscaling (HPA)
+
+Simulate traffic to trigger autoscaling (Scale out from 1 to 5 pods).
+
+**Open a new terminal and run:**
+
+```bash
+while true; do curl -X POST "http://localhost:8080/predict" \
+-H "Content-Type: application/json" \
+-d '{"station": "W 21 St & 6 Ave", "rideable_type": "classic_bike", "target_date": "2025-03-01"}'; \
+echo; done
+```
+
+**Monitor HPA in another terminal:**
+
+```bash
+kubectl get hpa -w
+
+```
+
+*Note: Scaling down (cooldown) takes approximately 5 minutes after traffic stops.*
+
+
+#### Cleanup
+
+
+To stop the application and clean up resources:
+
+```bash
+# Option 1: Remove only the application (Keep the cluster running)
+kubectl delete -f k8s/
+
+# Option 2: Delete the entire Kind cluster (Removes everything including Metrics Server)
+kind delete cluster --name citi-bike-cluster
 
 ```
 

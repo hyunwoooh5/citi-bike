@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: citi-bike-service
+spec:
+  type: ClusterIP
+  selector:
+    app: citi-bike
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 9696 # Container port (FastAPI)
