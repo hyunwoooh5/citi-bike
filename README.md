@@ -99,14 +99,14 @@ Three different model architectures were trained and evaluated based on **Root M
 | Model | Description | MSE (Test) |
 | --- | --- | --- |
 | **VAR (Vector AutoRegression)** | Multivariate time-series statistical model | 20.1269 |
-| **LSTM (Neural Network)** | 2-Layer LSTM with hidden size 64 | 15.1735 |
-| **XGBoost Regressor** | **Gradient Boosting Decision Tree** | **2.6108** 🏆 |
+| **LSTM (Neural Network)** | 2-Layer LSTM with hidden size 64 | 12.9794 |
+| **XGBoost Regressor** | **Gradient Boosting Decision Tree** | **2.0787** 🏆 |
 
 ### 4. Final Model
 
 The **XGBoost Regressor** was selected for its superior performance and efficiency.
 
-* **Hyperparameters:** `n_estimators=30`, `max_depth=20`, `learning_rate=0.1`
+* **Hyperparameters:** `n_estimators=58`, `max_depth=6`, `learning_rate=0.2089`
 * **Artifact:** The trained model is saved as `bin/model.bin` for deployment.
 
 -----
