@@ -5,8 +5,7 @@ import pickle
 
 
 def train(df, seed=42):
-    features = [col for col in df.columns if col !=
-                'target_next_stock' and col != 'time']
+    features = [col for col in df.columns if col != 'target_next_stock']
 
     X = df[features]
     y = df['target_next_stock']

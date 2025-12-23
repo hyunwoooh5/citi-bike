@@ -354,7 +354,8 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 ├── db/
 │   └── *.sql                     # SQL scripts for data extraction
 ├── notebooks/
-│   └── notebook.ipynb            # EDA and model experimentation
+│   ├── data_eda.ipynb            # Data collection and preprocessing
+│   └── modeling.ipynb            # model experimentation
 ├── src/
 │   ├── data_collection.py        # Add data to SQL database script
 │   ├── data_preprocessing.py     # Feature engineering logic
