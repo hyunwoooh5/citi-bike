@@ -86,28 +86,53 @@ The original dataset is sourced from [NYC Citi Bike data](https://citibikenyc.co
 
 ### 2. Exploratory Data Analysis (EDA)
 
-Performed in [`notebook/notebook.ipynb`](notebooks/notebook.ipynb):
+Performed in [`notebooks/data_collection_preprocessing_eda.ipynb`](notebooks/data_collection_preprocessing_eda.ipynb):
 
 * Analyzed summary statistics and distributions.
 * Imputed missing values using mean and mode strategies.
 * Visualized variable correlations and time-series patterns.
 
-### 3. Model Selection
+### 3. Model Selection & Experiment Tracking (MLflow)
 
-Three different model architectures were trained and evaluated based on **Root Mean Squared Error (RMSE)** on the test set.
+Three different model architectures were trained, and all experiments were tracked using **MLflow**.
+
+* **Tracking URI:** Local SQLite database (`sqlite:///mlflow.db`)
+* **Metric:** Experiments were evaluated based on **Root Mean Squared Error (RMSE)** on the test set.
 
 | Model | Description | MSE (Test) |
 | --- | --- | --- |
-| **VAR (Vector AutoRegression)** | Multivariate time-series statistical model | 20.1269 |
-| **LSTM (Neural Network)** | 2-Layer LSTM with hidden size 64 | 12.9794 |
-| **XGBoost Regressor** | **Gradient Boosting Decision Tree** | **2.0787** 🏆 |
+| **VAR (Vector AutoRegression)** | Multivariate time-series statistical model | 2.5062 | Arhived |
+| **LSTM (Neural Network)** | 2-Layer LSTM with hidden size 64 | 12.9794 | Archived |
+| **XGBoost Regressor** | **Gradient Boosting Decision Tree** | **2.0787** 🏆 | **Registered** |
 
-### 4. Final Model
 
-The **XGBoost Regressor** was selected for its superior performance and efficiency.
+
+
+
+### 4. Model Registry & Management
+
+The best performing model (XGBoost) was automatically selected and registered to the **MLflow Model Registry**.
+
+* **Automatic Registration:** The pipeline searches for the run with the lowest `test_rmse` and registers it as `CitiBike_Predictor`.
+* **Alias Management:** The best model version is assigned the **`@champion`** alias.
+* **Metadata:** Detailed descriptions (Markdown) for the model and versions are updated via the `MlflowClient`.
+
+### 5. Final Model Deployment
+
+The **XGBoost Regressor** is served via MLflow using the `champion` alias.
 
 * **Hyperparameters:** `n_estimators=58`, `max_depth=6`, `learning_rate=0.2089`
-* **Artifact:** The trained model is saved as `bin/model.bin` for deployment.
+* **Loading Strategy:**
+To support Pandas `category` data types natively used by XGBoost, the model is loaded using the `sklearn` flavor (bypassing the strict PyFunc schema enforcement).
+```python
+import mlflow
+model = mlflow.sklearn.load_model("models:/CitiBike_Predictor@champion")
+
+```
+
+
+* **Inference:** The model accepts categorical inputs directly without one-hot encoding, preserving the training schema.
+
 
 -----
 
