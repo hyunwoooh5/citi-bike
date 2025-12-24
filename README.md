@@ -117,7 +117,23 @@ The best performing model (XGBoost) was automatically selected and registered to
 * **Alias Management:** The best model version is assigned the **`@champion`** alias.
 * **Metadata:** Detailed descriptions (Markdown) for the model and versions are updated via the `MlflowClient`.
 
-### 5. Final Model Deployment
+
+
+### 5. Workflow Orchestration (Prefect)
+
+The entire training process is automated using **Prefect**, ensuring reproducibility and robust model management.
+
+* **Flow:** `flows/train_flow.py` orchestrates the end-to-end pipeline.
+* **Logic:**
+    1.  **Read & Preprocess:** Ingests data and generates lag features.
+    2.  **Train:** Fits an XGBoost model and logs parameters/metrics to MLflow.
+    3.  **Evaluate & Promote:** * Compares the new model's RMSE with the global best run.
+        * **Automatic Promotion:** If the new model wins, it is registered as `@champion` in MLflow.
+        * **Artifact Update:** The winning model is automatically serialized to `bin/model.bin` (using `sklearn` flavor) for immediate deployment.
+
+
+
+### 6. Final Model Deployment
 
 The **XGBoost Regressor** is served via MLflow using the `champion` alias.
 
@@ -278,16 +294,19 @@ kind delete cluster --name citi-bike-cluster
 
 ### Retraining the Model
 
-To retrain the model with new data or parameters:
+To retrain the model and automatically update the deployment artifact (`bin/model.bin`) using the Prefect pipeline:
 
+1. **Install workflow dependencies:**
 ```bash
-uv run python src/train.py
-
+uv sync --extra workflows
 ```
 
-This overwrites `bin/model.bin`.
+2. **Run the training flow:**
+```bash
+uv run python flows/train_flow.py "data/2024_top3.csv"
+```
 
-
+*Note: The `bin/model.bin` file will only be overwritten if the new model achieves a lower RMSE than the current best record.*
 
 
 -----
@@ -353,9 +372,11 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 │   └── *.csv                     # Processed datasets
 ├── db/
 │   └── *.sql                     # SQL scripts for data extraction
+├── flows/
+│   └── train_flow.py             # Prefect pipeline for training & promotion
 ├── notebooks/
 │   ├── data_eda.ipynb            # Data collection and preprocessing
-│   └── modeling.ipynb            # model experimentation
+│   └── modeling.ipynb            # Model experimentation
 ├── src/
 │   ├── data_collection.py        # Add data to SQL database script
 │   ├── data_preprocessing.py     # Feature engineering logic
