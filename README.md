@@ -8,7 +8,11 @@
 This project builds and deploys a machine learning model to predict the **stock (bike availability) 15 minutes into the future** for the top 3 most popular Citi Bike stations in NYC.
 
 
-The final model, an **XGBoost Regressor**, is served via a **FastAPI** application for local testing and is containerized for serverless deployment on **AWS Lambda**.
+Beyond model training, this repository implements a production-ready infrastructure that includes:
+
+* **Model Serving:** An **XGBoost Regressor** served via **FastAPI** and containerized for serverless deployment on **AWS Lambda**.
+* **Orchestration:** Automated training and monitoring workflows managed by **Prefect**.
+* **Observability:** Continuous tracking of **Data Drift** and **Model Performance** using **Evidently AI**, with metrics stored in **PostgreSQL** and visualized in **Grafana**.
 
 
 
@@ -123,7 +127,7 @@ The best performing model (XGBoost) was automatically selected and registered to
 
 The entire training process is automated using **Prefect**, ensuring reproducibility and robust model management.
 
-* **Flow:** `flows/train_flow.py` orchestrates the end-to-end pipeline.
+* **Flow:** [`flows/train_flow.py`](flows/train_flow.py) orchestrates the end-to-end pipeline.
 * **Logic:**
     1.  **Read & Preprocess:** Ingests data and generates lag features.
     2.  **Train:** Fits an XGBoost model and logs parameters/metrics to MLflow.
@@ -149,6 +153,93 @@ model = mlflow.sklearn.load_model("models:/CitiBike_Predictor@champion")
 
 * **Inference:** The model accepts categorical inputs directly without one-hot encoding, preserving the training schema.
 
+
+
+### 7. Monitoring & Observability (Evidently & Grafana)
+
+This project implements a comprehensive monitoring suite to track model performance and data health using **Evidently**, **PostgreSQL**, and **Grafana**.
+
+
+#### Monitoring Infrastructure
+
+The monitoring stack is containerized and managed via Docker Compose:
+
+* **PostgreSQL**: Serves as the metadata store for drift metrics and model performance.
+* **Grafana**: Provides real-time visualization with pre-configured data sources and dashboards.
+* **Adminer**: A lightweight database management tool for manual SQL inspection.
+
+
+
+#### Automated Monitoring Flows
+
+The monitoring logic is orchestrated through **Prefect** flows to enable consistent backfilling and scheduled checks:
+
+1. **Data Drift Monitoring** ([`flows/monitoring_data_flow.py`](flows/monitoring_data_flow.py)):
+* Uses Evidently's `DataDriftPreset` to compare current production data against the reference dataset.
+* Calculates drift scores for numerical and categorical features (e.g., `stock`, `is_rush_hour`, `station`).
+* Stores results in `column_drift` and `dataset_summary` tables.
+
+
+2. **Model Performance Monitoring** ([`flows/monitoring_performance_flow.py`](flows/monitoring_performance_flow.py)):
+* Uses Evidently's `RegressionPreset` to evaluate model accuracy.
+* Tracks key regression metrics: **RMSE**, **MAE**, and **Max Absolute Error**.
+* Saves daily performance snapshots into the `model_performance` table.
+
+
+
+#### How to Run Monitoring
+
+1. **Start the Infrastructure**:
+```bash
+docker-compose up -d
+
+```
+
+
+* **Grafana**: Access at [http://localhost:3000](http://localhost:3000) (Data source is automatically provisioned).
+* **Adminer**: Access at [http://localhost:8080](http://localhost:8080) to query the `evidently` database.
+
+
+2. **Run Backfill Flows**:
+Execute the monitoring flows by providing the month as a command-line argument:
+```bash
+# Run data drift analysis for March
+uv run python flows/monitoring_data_flow.py 3
+
+# Run performance analysis for March
+uv run python flows/monitoring_performance_flow.py 3
+
+```
+
+
+#### Sample Grafana Queries
+
+Use the following SQL queries to create visualizations in your Grafana dashboards:
+
+**Feature Drift (e.g., Stock Column)**
+
+```sql
+SELECT
+  timestamp AS "time",
+  drift_score,
+  column_name
+FROM column_drift
+WHERE column_name = 'stock'
+ORDER BY 1;
+
+```
+
+**Model Error Metrics (RMSE & MAE)**
+
+```sql
+SELECT
+  timestamp AS "time",
+  rmse,
+  mae
+FROM model_performance
+ORDER BY 1;
+
+```
 
 -----
 
@@ -366,30 +457,35 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 
 ```plaintext
 ├── bin/
-│   └── model.bin                 # Trained model artifact
+│   └── model.bin                      # Trained model artifact
 ├── data/
-│   ├── download_data.sh          # Script to download raw data
-│   └── *.csv                     # Processed datasets
+│   ├── download_data.sh               # Script to download raw data
+│   └── *.csv                          # Processed datasets
 ├── db/
-│   └── *.sql                     # SQL scripts for data extraction
+│   └── *.sql                          # SQL scripts for data extraction
 ├── flows/
-│   └── train_flow.py             # Prefect pipeline for training & promotion
+│   ├── monitoring_data_flow.py        # Prefect flow for data drift
+│   ├── monitoring_performance_flow.py # Prefect flow for performance metrics
+│   └── train_flow.py                  # Prefect pipeline for training & promotion
+├── grafana/
+│   ├── grafana_dashboards.yaml        # Grafana dashboard provisioning config
+│   └── grafana_datasources.yaml       # Grafana PostgreSQL data source config
 ├── notebooks/
-│   ├── data_eda.ipynb            # Data collection and preprocessing
-│   └── modeling.ipynb            # Model experimentation
+│   ├── data_eda.ipynb                 # Data collection and preprocessing
+│   └── modeling.ipynb                 # Model experimentation
 ├── src/
-│   ├── data_collection.py        # Add data to SQL database script
-│   ├── data_preprocessing.py     # Feature engineering logic
-│   ├── train.py                  # Model training script
-│   ├── predict.py                # Prediction logic
-│   ├── serve.py                  # FastAPI server (Local)
-│   ├── lambda_function.py        # AWS Lambda handler
-│   └── invoke.py                 # Script to test Lambda invocation
-├── Dockerfile                    # Docker config for FastAPI
-├── Dockerfile.lambda             # Docker config for AWS Lambda
-├── deploy_lambda.sh              # AWS deployment script
-├── pyproject.toml                # Dependencies
-└── README.md                     # Documentation
+│   ├── data_collection.py             # Add data to SQL database script
+│   ├── data_preprocessing.py          # Feature engineering logic
+│   ├── train.py                       # Model training script
+│   ├── predict.py                     # Prediction logic
+│   ├── serve.py                       # FastAPI server (Local)
+│   ├── lambda_function.py             # AWS Lambda handler
+│   └── invoke.py                      # Script to test Lambda invocation
+├── Dockerfile                         # Docker config for FastAPI
+├── Dockerfile.lambda                  # Docker config for AWS Lambda
+├── deploy_lambda.sh                   # AWS deployment script
+├── pyproject.toml                     # Dependencies
+└── README.md                          # Documentation
 
 ```
 

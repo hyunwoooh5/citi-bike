@@ -101,11 +101,8 @@ def feature_engineering(df):
     df['lag_60m_stock'] = grouper.shift(4)
     df['target_next_stock'] = grouper.shift(-1)
 
-    start_date = pd.to_datetime('2024-01-01')
-    end_date = pd.to_datetime('2025-01-01')
-
-    start_ts = start_date.to_numpy().astype(np.int64)
-    end_ts = end_date.to_numpy().astype(np.int64)
+    start_ts = pd.to_datetime('2024-01-01').value
+    end_ts = pd.to_datetime('2025-01-01').value
 
     df['date'] = df['time'].dt.normalize().to_numpy().astype(np.int64)
 

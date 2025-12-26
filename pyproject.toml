@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 workflows = [
+    "evidently>=0.7.18",
     "mlflow>=3.7.0",
     "prefect>=3.6.7",
 ]
