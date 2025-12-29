@@ -46,7 +46,7 @@ select = [
     "F", # Pyflakes
     "I", # isort
     "B", # flake8-bugbear
-    "UP"
+    "UP" # pyupgrade
 ]  
 
 ignore = ["E501"]

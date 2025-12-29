@@ -13,8 +13,36 @@ Beyond model training, this repository implements a production-ready infrastruct
 * **Model Serving:** An **XGBoost Regressor** served via **FastAPI** and containerized for serverless deployment on **AWS Lambda**.
 * **Orchestration:** Automated training and monitoring workflows managed by **Prefect**.
 * **Observability:** Continuous tracking of **Data Drift** and **Model Performance** using **Evidently AI**, with metrics stored in **PostgreSQL** and visualized in **Grafana**.
+* **Automation & Quality**: Task automation via **Make**, code quality enforcement with **Ruff**, and unit testing with **pytest**.
 
 
+-----
+
+## Quick Start (Automation with Make)
+
+This project uses a `Makefile` to simplify common tasks. To see all available commands, run:
+
+```bash
+make help
+```
+
+### 1. Environment Setup
+
+We use **[uv](https://github.com/astral-sh/uv)** for extremely fast Python package management.
+
+```bash
+make setup
+```
+
+### 2. Code Quality & Testing
+
+Before committing, ensure your code follows standards and passes tests:
+
+```bash
+make check  # Run Ruff linter and formatter checks
+make fix    # Automatically fix linting issues and reformat code
+make test   # Run unit tests using pytest
+```
 
 -----
 
@@ -147,7 +175,6 @@ To support Pandas `category` data types natively used by XGBoost, the model is l
 ```python
 import mlflow
 model = mlflow.sklearn.load_model("models:/CitiBike_Predictor@champion")
-
 ```
 
 
@@ -192,7 +219,6 @@ The monitoring logic is orchestrated through **Prefect** flows to enable consist
 1. **Start the Infrastructure**:
 ```bash
 docker-compose up -d
-
 ```
 
 
@@ -208,7 +234,6 @@ uv run python flows/monitoring_data_flow.py 3
 
 # Run performance analysis for March
 uv run python flows/monitoring_performance_flow.py 3
-
 ```
 
 
@@ -226,7 +251,6 @@ SELECT
 FROM column_drift
 WHERE column_name = 'stock'
 ORDER BY 1;
-
 ```
 
 **Model Error Metrics (RMSE & MAE)**
@@ -238,7 +262,6 @@ SELECT
   mae
 FROM model_performance
 ORDER BY 1;
-
 ```
 
 -----
@@ -246,106 +269,46 @@ ORDER BY 1;
 
 
 
-## Usage and Deployment
+## Deployment Options
 
-This project uses **[uv](https://github.com/astral-sh/uv)** for fast and reliable Python package management.
+### Option 1: Local FastAPI Server
 
-### Prerequisites
-
-Install `uv` (macOS/Linux):
+Run the API locally using `uv`:
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
+make run-local
 ```
 
-
-### Option 1: Run Locally (FastAPI)
-
-1. **Install dependencies:**
-```bash
-uv sync --locked
-
-```
-
-
-2. **Run the server:** 
-*Note: The server runs on host `0.0.0.0` and port `9696`.*
-```bash
-uv run python src/serve.py
-
-```
-
-
-3. **Access the API:**
 Open [http://localhost:9696/docs](http://localhost:9696/docs) to use the Swagger UI.
 
 
 
-### Option 2: Run with Docker
+### Options 2: Kubernetes (Kind & HPA)
 
-1. **Build the image:**
-```bash
-docker build --platform=linux/amd64 -t citi-bike .
-
-```
+#### 1. Deploy Application
 
 
-2. **Run the container:**
-```bash
-docker run -it --rm --platform=linux/amd64 -p 9696:9696 citi-bike
-
-```
-
-### Options 3: Run with Kubernetes (Kind & HPA)
-This project supports local Kubernetes deployment with **Horizontal Pod Autoscaling (HPA)** using Kind.
-
-
-#### 1. Setup Cluster & Metrics Server
-
-Create a cluster and install the Metric Servers (patched for Kind) to enable HPA.
+Deploy to a local Kind cluster with **Horizontal Pod Autoscaling**.
 
 ```bash
-# 1. Create Cluster
-kind create cluster --name citi-bike-cluster
-
-# 2. Install Metrics Server
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-
-# 3. Patch Metrics Server (Required for Kind)
-kubectl patch deployment metrics-server -n kube-system --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
-
+make k8s-up
 ```
 
-
-#### 2. Deploy Application
-
-Build the image, load it into the cluster nodes, and deploy resources.
-
-```bash
-# 1. Build & Load Image
-docker build -t citi-bike:v1 -f Dockerfile .
-kind load docker-image citi-bike:v1 --name citi-bike-cluster
-
-# 2. Apply Manifests (Deployment, Service, HPA)
-kubectl apply -f k8s/
-
-```
+* This command builds the image, creates the cluster, installs the Metrics Server (patched for Kind), and applies the manifests in `k8s/`.
 
 
-#### 3. Access the Service
+#### 2. Access the Service
 
 Port-forward the service to your local machine.
 
 ```bash
 kubectl port-forward service/citi-bike-service 8080:80
-
 ```
 
-Access the API at: [http://localhost:8080/docs](https://www.google.com/search?q=http://localhost:8080/docs)
+Access the API at: [http://localhost:8080/docs](http://localhost:8080/docs)
 
 
-#### 4. Test Autoscaling (HPA)
+#### 3. Test Autoscaling (HPA)
 
 Simulate traffic to trigger autoscaling (Scale out from 1 to 5 pods).
 
@@ -362,7 +325,6 @@ echo; done
 
 ```bash
 kubectl get hpa -w
-
 ```
 
 *Note: Scaling down (cooldown) takes approximately 5 minutes after traffic stops.*
@@ -374,12 +336,7 @@ kubectl get hpa -w
 To stop the application and clean up resources:
 
 ```bash
-# Option 1: Remove only the application (Keep the cluster running)
-kubectl delete -f k8s/
-
-# Option 2: Delete the entire Kind cluster (Removes everything including Metrics Server)
-kind delete cluster --name citi-bike-cluster
-
+make k8s-down docker-rmi
 ```
 
 
@@ -423,7 +380,6 @@ aws iam create-role --role-name lambda-basic-execution-role --assume-role-policy
 
 # 3. Attach Policy
 aws iam attach-role-policy --role-name lambda-basic-execution-role --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
 ```
 
 #### 2. Deploy the Function
@@ -431,9 +387,7 @@ aws iam attach-role-policy --role-name lambda-basic-execution-role --policy-arn 
 The [deploy_lambda.sh](deploy_lambda.sh) script builds the Docker image, pushes it to AWS ECR, and creates/updates the Lambda function.
 
 ```bash
-chmod +x deploy_lambda.sh
-./deploy_lambda.sh
-
+make deploy-lambda
 ```
 
 ### 3. Invoke the Function
@@ -444,7 +398,6 @@ Test the deployed Lambda function using `curl`.
 curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 -H "Content-Type: application/json" \
 -d '{"station": "W 21 St & 6 Ave", "rideable_type": "classic_bike", "target_date": "2025-03-01"}'
-
 ```
 
 -----
@@ -464,8 +417,8 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 ├── db/
 │   └── *.sql                          # SQL scripts for data extraction
 ├── flows/
-│   ├── monitoring_data_flow.py        # Prefect flow for data drift
-│   ├── monitoring_performance_flow.py # Prefect flow for performance metrics
+│   ├── monitoring_data_flow.py        # Prefect pipeline for data drift
+│   ├── monitoring_performance_flow.py # Prefect pipeline for performance metrics
 │   └── train_flow.py                  # Prefect pipeline for training & promotion
 ├── grafana/
 │   ├── grafana_dashboards.yaml        # Grafana dashboard provisioning config
@@ -482,13 +435,13 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 │   ├── lambda_function.py             # AWS Lambda handler
 │   └── invoke.py                      # Script to test Lambda invocation
 ├── tests/
-│   └── data_processing_test.py        # Pytest for data processing
+│   └── data_processing_test.py        # Pytest unit tests
 ├── Dockerfile                         # Docker config for FastAPI
 ├── Dockerfile-lambda                  # Docker config for AWS Lambda
 ├── deploy_lambda.sh                   # AWS deployment script
+├── Makefile                           # Automation commands
 ├── pyproject.toml                     # Dependencies
 └── README.md                          # Documentation
-
 ```
 
 
