@@ -1,20 +1,27 @@
+import pickle
+import sys
+from pathlib import Path
+
+import mlflow
+import numpy as np
 import pandas as pd
 import xgboost as xgb
-import numpy as np
-import sys
-import pickle
-import mlflow
 from mlflow.tracking import MlflowClient
 from sklearn.metrics import mean_squared_error
-from pathlib import Path
 
 root_path = Path(__file__).resolve().parent.parent
 if str(root_path) not in sys.path:
     sys.path.append(str(root_path))
 
-from prefect import task, flow
+from prefect import flow, task  # noqa: E402
 
-from src.data_processing import preprocess, remove_outlier, feature_time_series, wide_to_long, feature_engineering
+from src.data_processing import (  # noqa: E402
+    feature_engineering,
+    feature_time_series,
+    preprocess,
+    remove_outlier,
+    wide_to_long,
+)
 
 
 @task(name="Read csv file")
@@ -22,10 +29,7 @@ def read_csv(file):
     return pd.read_csv(file)
 
 
-@task(name="Preprocessing",
-      retries=3,
-      retry_delay_seconds=5,
-      log_prints=True)
+@task(name="Preprocessing", retries=3, retry_delay_seconds=5, log_prints=True)
 def data_preprocessing(df):
     df = preprocess(df)
     df = remove_outlier(df)
@@ -40,12 +44,12 @@ def train(df):
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("citi-bike")
 
-    features = [col for col in df.columns if col != 'target_next_stock']
+    features = [col for col in df.columns if col != "target_next_stock"]
 
     X = df[features]
-    y = df['target_next_stock']
+    y = df["target_next_stock"]
 
-    split_idx = int(len(X)*0.8)
+    split_idx = int(len(X) * 0.8)
 
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
@@ -55,12 +59,13 @@ def train(df):
         mlflow.set_tag("model_type", "xgboost")
         mlflow.set_tag("developer", "prefect-pipeline")
 
-        model = xgb.XGBRegressor(random_state=42,
-                                 enable_categorical=True,
-                                 n_estimators=58,
-                                 max_depth=6,
-                                 learning_rate=0.2089
-                                 )
+        model = xgb.XGBRegressor(
+            random_state=42,
+            enable_categorical=True,
+            n_estimators=58,
+            max_depth=6,
+            learning_rate=0.2089,
+        )
 
         model.fit(X_train, y_train)
 
@@ -90,12 +95,13 @@ def promote_model(current_run_id, current_rmse):
         experiment_ids=[experiment.experiment_id],
         filter_string="",
         max_results=1,
-        order_by=["metrics.test_rmse ASC"]
+        order_by=["metrics.test_rmse ASC"],
     )[0]
 
     best_run_id = best_run.info.run_id
     best_rmse = best_run.data.metrics.get(
-        "test_rmse", float('inf'))  # inf: default value if not exist
+        "test_rmse", float("inf")
+    )  # inf: default value if not exist
 
     print(f"Global Best RMSE: {best_rmse} (Run ID: {best_run_id})")
     print(f"Current Run RMSE: {current_rmse} (Run ID: {current_run_id})")
@@ -104,13 +110,10 @@ def promote_model(current_run_id, current_rmse):
         print("New model is the best. Promoting to Champion")
 
         model_uri = f"runs:/{current_run_id}/model"
-        model_version = mlflow.register_model(
-            model_uri=model_uri, name=model_name)
+        model_version = mlflow.register_model(model_uri=model_uri, name=model_name)
 
         client.set_registered_model_alias(
-            name=model_name,
-            alias="Champion",
-            version=model_version.version
+            name=model_name, alias="Champion", version=model_version.version
         )
 
         print(f"Model version {model_version.version} aliased as '@champion'.")
@@ -139,7 +142,7 @@ def main(file):
     promote_model(run_id, rmse)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv[1])
 
     # Scheduler if needed

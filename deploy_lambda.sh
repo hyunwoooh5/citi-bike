@@ -56,7 +56,7 @@ echo "Builder is ready."
 
 
 docker buildx build \
-    -f Dockerfile.lambda \
+    -f Dockerfile-lambda \
     --builder lambda-builder \
     --platform linux/amd64 \
     --load \

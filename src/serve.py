@@ -1,7 +1,9 @@
-from fastapi import FastAPI
-import uvicorn
-from pydantic import BaseModel
 import pickle
+
+import uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel
+
 from predict import Info, predict_day
 
 
@@ -27,10 +29,7 @@ app = FastAPI(title="citi-bike")
 def predict(info: Info) -> PredictResponse:
     prediction = predict_day(model, info)
 
-    return PredictResponse(
-        prediction=prediction,
-        warning=bool(prediction)
-    )
+    return PredictResponse(prediction=prediction, warning=bool(prediction))
 
 
 @app.get("/health")  # check if the app works

@@ -481,8 +481,10 @@ curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
 │   ├── serve.py                       # FastAPI server (Local)
 │   ├── lambda_function.py             # AWS Lambda handler
 │   └── invoke.py                      # Script to test Lambda invocation
+├── tests/
+│   └── data_processing_test.py        # Pytest for data processing
 ├── Dockerfile                         # Docker config for FastAPI
-├── Dockerfile.lambda                  # Docker config for AWS Lambda
+├── Dockerfile-lambda                  # Docker config for AWS Lambda
 ├── deploy_lambda.sh                   # AWS deployment script
 ├── pyproject.toml                     # Dependencies
 └── README.md                          # Documentation

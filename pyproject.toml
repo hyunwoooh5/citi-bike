@@ -26,11 +26,31 @@ dev = [
     "boto3>=1.42.11",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.7",
+    "pre-commit>=4.5.1",
     "psycopg2>=2.9.11",
     "pytest>=9.0.2",
+    "ruff>=0.14.10",
     "seaborn>=0.13.2",
     "statsmodels>=0.14.6",
     "torch>=2.9.1",
     "torchstudio>=0.0.2",
     "torchvision>=0.24.1",
 ]
+
+[tool.ruff]
+line-length=88
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "UP"
+]  
+
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
