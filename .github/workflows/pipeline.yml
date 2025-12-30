@@ -1,0 +1,64 @@
+name: Citi Bike CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ 'v*' ]
+    paths:
+      - 'src/**'
+      - 'flows/**'
+      - 'tests/**'
+      - 'notebooks/**'
+      - 'pyproject.toml'
+      - 'Makefile'
+      - 'Dockerfile-lambda'
+      - 'deploy_lambda.sh'
+      - 'bin/model.bin'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'src/**'
+      - 'flows/**'
+      - 'tests/**'
+
+jobs:
+  # CI: for every push/pull request
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+        
+      - name: Install dependencies
+        run: make setup
+        
+      - name: Lint and Format Check (Ruff)
+        run: make check
+        
+      - name: Run Unit Tests (Pytest)
+        run: make test
+
+  # CD: deploy to AWS Lambda (only when pass quality-check and push tag)
+  deploy:
+    needs: quality-check
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          
+      - name: Deploy via Script
+        run: make deploy-lambda
+      
