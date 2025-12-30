@@ -14,6 +14,7 @@ Beyond model training, this repository implements a production-ready infrastruct
 * **Orchestration:** Automated training and monitoring workflows managed by **Prefect**.
 * **Observability:** Continuous tracking of **Data Drift** and **Model Performance** using **Evidently AI**, with metrics stored in **PostgreSQL** and visualized in **Grafana**.
 * **Automation & Quality**: Task automation via **Make**, code quality enforcement with **Ruff**, and unit testing with **pytest**.
+* **CI/CD**: Automated integration and deployment pipeline using **GitHub Actions**.
 
 
 -----
@@ -43,6 +44,74 @@ make check  # Run Ruff linter and formatter checks
 make fix    # Automatically fix linting issues and reformat code
 make test   # Run unit tests using pytest
 ```
+
+
+-----
+
+## CI/CD & Deployment
+
+This project leverages **GitHub Actions** for automated quality assurance and **AWS Lambda** for scalable, serverless inference.
+
+### 1. Infrastructure Setup (One-time)
+
+Before any deployment, the AWS environment must be prepared. These commands create the necessary IAM Role that allows Lambda to execute and log to CloudWatch.
+
+```bash
+# 1. Create Trust Policy
+echo '{
+  "Version": "2012-10-17",
+  "Statement": [{"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}]
+}' > trust-policy.json
+
+# 2. Create the IAM Role
+aws iam create-role --role-name lambda-basic-execution-role --assume-role-policy-document file://trust-policy.json
+
+# 3. Attach Execution Policy
+aws iam attach-role-policy --role-name lambda-basic-execution-role --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+```
+
+
+### 2. Deployment Options
+
+#### Option A: Automated Deployment (Recommended)
+
+Managed by GitHub Actions. Every time a version tag is pushed, the pipeline runs tests and updates the Lambda function.
+
+**Prerequisites:** Add these to GitHub Secrets (**Settings > Secrets > Actions**):
+
+* `AWS_ACCESS_KEY_ID`
+* `AWS_SECRET_ACCESS_KEY`
+
+**Trigger:**
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+#### Option B: Manual Deployment (Optional)
+
+Useful for local testing or emergency updates without pushing to GitHub.
+
+**Prerequisites:** Ensure your local AWS CLI is configured (`aws configure`).
+
+**Execution:**
+
+```bash
+# This command runs deploy_lambda.sh via Makefile
+make deploy-lambda
+
+```
+
+
+
+### 3. CI/CD Workflow Summary
+
+* **Continuous Integration**: On every push to `main`, `ruff` (linting) and `pytest` (unit tests) are executed to maintain code quality.
+* **Continuous Deployment**: Triggered by tags (`v*`). It builds a Docker image (`linux/amd64`), pushes it to **Amazon ECR**, and updates the **Lambda** function code and configuration (60s timeout, 256MB memory).
+
+
+
 
 -----
 
@@ -118,7 +187,7 @@ The original dataset is sourced from [NYC Citi Bike data](https://citibikenyc.co
 
 ### 2. Exploratory Data Analysis (EDA)
 
-Performed in [`notebooks/data_collection_preprocessing_eda.ipynb`](notebooks/data_collection_preprocessing_eda.ipynb):
+Performed in [`notebooks/data_eda.ipynb`](notebooks/data_eda.ipynb):
 
 * Analyzed summary statistics and distributions.
 * Imputed missing values using mean and mode strategies.
@@ -269,7 +338,7 @@ ORDER BY 1;
 
 
 
-## Deployment Options
+## Alternative Deployment Options
 
 ### Option 1: Local FastAPI Server
 
@@ -356,49 +425,6 @@ uv run python flows/train_flow.py "data/2024_top3.csv"
 
 *Note: The `bin/model.bin` file will only be overwritten if the new model achieves a lower RMSE than the current best record.*
 
-
------
-
-
-## Deployment to AWS Lambda
-
-This guide assumes you have the AWS CLI configured.
-
-### 1. IAM Role Setup
-
-Create an execution role for Lambda.
-
-```bash
-# 1. Create Trust Policy
-echo '{
-  "Version": "2012-10-17",
-  "Statement": [{"Effect": "Allow", "Principal": {"Service": "lambda.amazonaws.com"}, "Action": "sts:AssumeRole"}]
-}' > trust-policy.json
-
-# 2. Create Role
-aws iam create-role --role-name lambda-basic-execution-role --assume-role-policy-document file://trust-policy.json
-
-# 3. Attach Policy
-aws iam attach-role-policy --role-name lambda-basic-execution-role --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-```
-
-#### 2. Deploy the Function
-
-The [deploy_lambda.sh](deploy_lambda.sh) script builds the Docker image, pushes it to AWS ECR, and creates/updates the Lambda function.
-
-```bash
-make deploy-lambda
-```
-
-### 3. Invoke the Function
-
-Test the deployed Lambda function using `curl`.
-
-```bash
-curl -X POST '<YOUR_LAMBDA_FUNCTION_URL>' \
--H "Content-Type: application/json" \
--d '{"station": "W 21 St & 6 Ave", "rideable_type": "classic_bike", "target_date": "2025-03-01"}'
-```
 
 -----
 
