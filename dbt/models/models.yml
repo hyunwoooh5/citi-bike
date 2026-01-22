@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_trips_2024
+    description: "refine 2024 data"
+  
+  - name: stg_trips_2025
+    description: "refine 2025 data"
+
+  - name: int_top_3_stations_2024
+    description: "find three busiest stations in 2024"
+
+  - name: fct_2024_top_trips
+    description: "data for top 3 stations in 2024"
+
+  - name: fct_2025_top_trips
+    description: "data for top 3 stations in 2025"

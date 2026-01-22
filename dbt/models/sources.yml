@@ -1,0 +1,8 @@
+version: 2
+sources:
+  - name: citibike_raw
+    database: citi-bike-485020
+    schema: citibike_raw
+    tables:
+      - name: trips_2024
+      - name: trips_2025
