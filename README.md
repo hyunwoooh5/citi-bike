@@ -139,11 +139,36 @@ The model relies on recent historical data (previous stock levels) to calculate 
 
 ## Dataset & Features
 
-The data is sourced from the [NYC Citi Bike System Data](https://citibikenyc.com/system-data).
+The data is sourced from the [NYC Citi Bike System Data](https://citibikenyc.com/system-data).  The data pipeline has been migrated to an **ELT architecture** using **Google Cloud Platform (BigQuery, Cloud Storage)** and **dbt** for scalable processing and transformation.
 
-* **Training Data:** 2024 records (via `data/download_data.sh` and `db/2024_citibike_top3_stations.sql`).
-* **Test Data:** 2025 records (via `data/2025_citibike_top3_stations.sql`).
-* **Preprocessing:** Handled by `src/data.py`. 
+### 1. Environment Setup
+
+To run the pipeline, you must configure the necessary environment variables. It is recommended to use `direnv` with an `.envrc` file in the project root:
+
+```bash
+# .envrc
+export GOOGLE_APPLICATION_CREDENTIALS="./keys/my-project-key.json"
+export GCP_PROJECT_ID="your-gcp-project-id"
+export GCP_BUCKET_NAME="your-citibike-bucket-name"
+```
+
+### 2. Data Pipeline
+
+The dataset creation process consists of the following steps:
+
+**Ingestion (EL):**
+* The script `src/ingest_to_gcs.py` downloads raw trip data from the source and uploads it directly to a **Google Cloud Storage (GCS)** bucket.
+* This data is then loaded into **BigQuery** after querying `db/bigquery.sql` (raw dataset).
+
+**Transformation (T):**
+* All data transformations are handled by **dbt** (located in the `dbt/` directory).
+* **Logic:**
+  1. **Staging:** Cleans raw data for 2024 and 2025.
+  2. **Intermediate:** Identifies the **top 3 busiest stations** based on 2024 data.
+  3. **Marts:** Filters the 2024 and 2025 trip data to include only trips starting or ending at these top 3 stations.
+
+After this, the data is proprocessed by `src/data_processing.py` for modeling and forecasting.
+
 
 ### Key Data Assumption: Daily Rebalancing
 
@@ -151,6 +176,8 @@ For the purpose of this project, a specific initialization rule was applied to t
 
 > **At 00:00 (midnight) every day, every station is assumed to be rebalanced.**
 > The stock is reset to **10 classic bikes** and **10 electric bikes** for each station. This provides a consistent baseline for the model to begin predictions for the new day.
+
+
 
 ### Feature Descriptions
 

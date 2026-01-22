@@ -19,8 +19,6 @@ class Info(BaseModel):
 
             if parsed_date.year != 2025:
                 raise ValueError("Year should be 2025")
-            elif parsed_date.month == 12:
-                raise ValueError("Month should be less than 12")
 
         except ValueError as err:
             raise ValueError("Incorrect date") from err
