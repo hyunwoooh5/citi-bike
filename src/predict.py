@@ -49,8 +49,8 @@ def predict_day(model, info):
     mask = (
         (df_history["station"] == info.station)
         & (df_history["rideable_type"] == info.rideable_type)
-        & (df_history["time"] >= start_search)
-        & (df_history["time"] <= end_search)
+        & (df_history["time"].dt.tz_localize(None) >= start_search)
+        & (df_history["time"].dt.tz_localize(None) <= end_search)
     )
     data = df_history.loc[mask].copy()
 
@@ -73,8 +73,12 @@ def predict_day(model, info):
         end_ts - start_ts
     )
 
-    target_mask = (data["time"] >= pd.to_datetime(info.target_date + " 00:00:00")) & (
-        data["time"] <= pd.to_datetime(info.target_date + " 23:45:00")
+    target_mask = (
+        data["time"].dt.tz_localize(None)
+        >= pd.to_datetime(info.target_date + " 00:00:00")
+    ) & (
+        data["time"].dt.tz_localize(None)
+        <= pd.to_datetime(info.target_date + " 23:45:00")
     )
 
     inference_df = data.loc[target_mask].copy()

@@ -6,3 +6,6 @@ __pycache__/
 # MLflow
 mlruns
 mlflow.db
+
+.env
+.envrc

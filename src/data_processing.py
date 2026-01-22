@@ -131,7 +131,7 @@ def feature_engineering(df):
     start_ts = pd.to_datetime("2024-01-01").value
     end_ts = pd.to_datetime("2025-01-01").value
 
-    df["date"] = df["time"].dt.normalize().to_numpy().astype(np.int64)
+    df["date"] = df["time"].dt.normalize().values.astype(np.int64)
 
     df["date"] = (df["date"] - start_ts) / (end_ts - start_ts)
 

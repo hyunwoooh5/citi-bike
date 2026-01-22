@@ -24,11 +24,13 @@ workflows = [
 [dependency-groups]
 dev = [
     "boto3>=1.42.11",
+    "google-cloud-storage>=3.8.0",
     "jupyter>=1.1.1",
     "matplotlib>=3.10.7",
     "pre-commit>=4.5.1",
     "psycopg2>=2.9.11",
     "pytest>=9.0.2",
+    "requests>=2.32.5",
     "ruff>=0.14.10",
     "seaborn>=0.13.2",
     "statsmodels>=0.14.6",
